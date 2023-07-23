@@ -1,22 +1,12 @@
 mod test;
 
-use error_chain::error_chain;
+use anyhow::Error;
 use std::fs;
-use std::fs::{File};
-use std::io::{Read};
+use std::fs::File;
+use std::io::Read;
+use std::path::PathBuf;
 use clap::Parser;
 use prost::Message;
-
-error_chain! {
-    foreign_links {
-        Utf8(std::str::Utf8Error);
-        AddrParse(std::net::AddrParseError);
-        Io(std::io::Error);
-        SystemTimeError(std::time::SystemTimeError);
-        Decode(prost::DecodeError);
-        Sled(sled::Error);
-    }
-}
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -50,24 +40,23 @@ pub struct Node {
     pub store_key: String
 }
 
-fn sorted_files(dir: &str) -> Result<Vec<String>> {
+fn sorted_files(dir: &str) -> Result<Vec<PathBuf>, Error> {
     let mut files = fs::read_dir(dir)?
         .map(|res| res.map(|e| e.path()))
-        .collect::<Result<Vec<_>>>()?;
+        .collect::<Result<Vec<_>, _>>()?;
     files.sort();
     Ok(files)
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<(), Error> {
     // let args = Args::parse();
 
     let log_dir = "/Users/mattk/src/scratch/osmosis-hist/bank";
     let tree = sled::open("/Users/mattk/.costor/sled.db")?;
 
     let mut count = 0;
-    for entry in fs::read_dir(log_dir)? {
-        let entry = entry?;
-        let path = entry.path();
+    let entries = sorted_files(log_dir)?;
+    for path in entries {
         println!("path: {:?}", path);
         let f = File::open(path)?;
         let mut gz = flate2::read::GzDecoder::new(f);

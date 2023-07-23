@@ -1,5 +1,3 @@
-use std::io::Error;
-
 fn work() {
     let results = [Ok(1), Err("nope"), Ok(3), Err("bad")];
 
